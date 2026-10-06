@@ -1,0 +1,54 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Packaging/build output
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local secrets and generated data
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+local_settings.py
+
+# GitHub test / runtime artifacts
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Project-specific local state
+state.json
+.gitkeep
+
+# Generated git repos or temp workdirs
+/tmp/
+*.repo/
+repos/

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sgitline"
+version = "0.1.0"
+description = "A minimal SGitLine learning implementation based on the CCS '25 paper"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pycryptodome>=3.20",
+    "cryptography",
+    "hypothesis",
+    "pytest",
+    "requests",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "unit: unit tests",
+    "integration: local git tests",
+    "adversarial: security checks",
+    "github: network tests that require env vars",
+]
