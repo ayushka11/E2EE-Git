@@ -102,7 +102,8 @@ def parse_tag(msg: str) -> Tag:
 
 
 def acs_digest(rid: str, a: AccessFile) -> bytes:
-    return H(b"acs", rid.encode("utf-8"), acs_to_bytes(a))
+    unsigned = AccessFile(R=a.R, W=a.W, sigma=None)
+    return H(b"acs", rid.encode("utf-8"), acs_to_bytes(unsigned))
 
 
 def version_digest(rid: str, uid_w: str, rh: bytes, prev: bytes) -> bytes:
@@ -111,9 +112,70 @@ def version_digest(rid: str, uid_w: str, rh: bytes, prev: bytes) -> bytes:
 
 def validate_paths(files: dict[str, bytes]) -> None:
     for path in files:
-        if path in {".git", ".sgit"} or path.startswith(".sgit/"):
+        if path in {".git", ".sgit"}:
             raise ValueError("reserved path")
+        if path.startswith(".sgit/"):
+            if path != ".sgit/acs.json":
+                raise ValueError("reserved path")
         if path.startswith("/") or ".." in path.split("/"):
             raise ValueError("illegal path")
         if path.startswith(".git/"):
             raise ValueError("illegal path")
+
+
+@dataclass
+class VerifiedVersion:
+    rid: str
+    uid: str
+    rh: bytes
+    digest: bytes
+    files_ct: dict[str, bytes]
+    acs: AccessFile | None
+
+
+def verify_version(
+    rid: str,
+    owner_uid: str,
+    files_ct: dict[str, bytes],
+    commit_msg: str,
+    prev_expected: bytes,
+    key_lookup: callable,
+) -> VerifiedVersion:
+    from sgit.crypto.primitives import ds_verify
+    from sgit.merkle.tree import MerkleTree
+
+    validate_paths(files_ct)
+    tag = parse_tag(commit_msg)
+
+    if tag.prev != prev_expected:
+        raise ValueError(f"prev digest mismatch: expected {prev_expected.hex()}, got {tag.prev.hex()}")
+
+    acs: AccessFile | None = None
+    if ".sgit/acs.json" in files_ct:
+        acs = parse_acs(files_ct[".sgit/acs.json"])
+        _, owner_pk_s = key_lookup(owner_uid)
+        if not acs.sigma:
+            raise ValueError("missing acs signature")
+        if not ds_verify(owner_pk_s, acs_digest(rid, acs), acs.sigma):
+            raise ValueError("bad acs signature")
+        if tag.uid != owner_uid and tag.uid not in acs.W:
+            raise ValueError(f"user '{tag.uid}' is not authorized to write")
+    else:
+        if tag.uid != owner_uid:
+            raise ValueError(f"unauthorized writer '{tag.uid}' on unshared version")
+
+    rh = MerkleTree.from_files(files_ct).root()
+    digest = version_digest(rid, tag.uid, rh, prev_expected)
+    _, author_pk_s = key_lookup(tag.uid)
+    if not ds_verify(author_pk_s, digest, tag.sig):
+        raise ValueError(f"bad version signature for user '{tag.uid}'")
+
+    return VerifiedVersion(
+        rid=rid,
+        uid=tag.uid,
+        rh=rh,
+        digest=digest,
+        files_ct=files_ct,
+        acs=acs,
+    )
+

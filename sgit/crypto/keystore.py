@@ -12,16 +12,19 @@ from sgit.crypto.primitives import ds_keygen, pke_keygen
 class Keystore:
     """A tiny passphrase-protected keystore for local keys."""
 
-    def __init__(self, path: str, passphrase: str):
-        self.path = path
+    def __init__(self, path: str, passphrase: str, auto_load: bool = True):
+        self.path = str(path)
         self.passphrase = passphrase.encode("utf-8")
+        self.master_key = b""
         self.private_ephemeral = b""
         self.public_ephemeral = b""
         self.private_signing = b""
         self.public_signing = b""
+        if auto_load:
+            self.load()
 
     def _derive_key(self, salt: bytes) -> bytes:
-        return hashlib.scrypt(self.passphrase, salt=salt, n=2**15, r=8, p=1, dklen=32)
+        return hashlib.scrypt(self.passphrase, salt=salt, n=2**15, r=8, p=1, maxmem=64 * 1024 * 1024, dklen=32)
 
     def load(self) -> None:
         if not os.path.exists(self.path):
@@ -40,6 +43,7 @@ class Keystore:
         except ValueError as exc:
             raise ValueError("wrong passphrase or corrupted keystore") from exc
         data = json.loads(plaintext.decode("utf-8"))
+        self.master_key = bytes.fromhex(data.get("mk", os.urandom(32).hex()))
         self.private_ephemeral = bytes.fromhex(data["sk_e"])
         self.public_ephemeral = bytes.fromhex(data["pk_e"])
         self.private_signing = bytes.fromhex(data["sk_s"])
@@ -47,6 +51,7 @@ class Keystore:
 
     def save(self) -> None:
         data = {
+            "mk": self.master_key.hex(),
             "pk_e": self.public_ephemeral.hex(),
             "sk_e": self.private_ephemeral.hex(),
             "pk_s": self.public_signing.hex(),
@@ -58,10 +63,14 @@ class Keystore:
         cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
         plaintext = json.dumps(data, sort_keys=True).encode("utf-8")
         ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+        dir_name = os.path.dirname(self.path)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
         with open(self.path, "wb") as handle:
             handle.write(salt + nonce + tag + ciphertext)
 
     def _generate_new(self) -> None:
+        self.master_key = os.urandom(32)
         sk_e, pk_e = pke_keygen()
         sk_s, pk_s = ds_keygen()
         self.private_ephemeral = sk_e
