@@ -34,13 +34,6 @@ The goal is intentionally narrow: implement the core SGitLine ideas in a clear, 
 python3 -m venv .venv
 ```
 
-> [!NOTE]
-> On systems where `ensurepip` is not bundled (such as minimal Debian/Ubuntu installations), you can create the environment with `--without-pip` and bootstrap pip:
-> ```bash
-> python3 -m venv --without-pip .venv
-> curl -sSL https://bootstrap.pypa.io/get-pip.py | .venv/bin/python
-> ```
-
 ### 2. Activate Environment & Install Dependencies
 
 ```bash
