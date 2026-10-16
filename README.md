@@ -21,12 +21,57 @@ The goal is intentionally narrow: implement the core SGitLine ideas in a clear, 
 - GitHub and the service host are treated as honest-but-curious placeholders, matching the paper’s SGitLine assumptions.
 - The code deliberately keeps the structure simple and easy to understand.
 
-## Local verification
+## Setup and Installation
 
-Run the project tests from the repo root with:
+### Prerequisites
+
+- Python 3.11+
+- Git CLI
+
+### 1. Create a Virtual Environment
+
+```bash
+python3 -m venv .venv
+```
+
+> [!NOTE]
+> On systems where `ensurepip` is not bundled (such as minimal Debian/Ubuntu installations), you can create the environment with `--without-pip` and bootstrap pip:
+> ```bash
+> python3 -m venv --without-pip .venv
+> curl -sSL https://bootstrap.pypa.io/get-pip.py | .venv/bin/python
+> ```
+
+### 2. Activate Environment & Install Dependencies
+
+```bash
+# Activate the virtual environment
+source .venv/bin/activate
+
+# Install the package and all dependencies in editable mode
+pip install -e .
+```
+
+Dependencies installed via `pyproject.toml`:
+- `pycryptodome>=3.20`
+- `cryptography`
+- `hypothesis`
+- `pytest`
+- `requests`
+
+## Running the Project
+
+### Running Tests
+
+Run the test suite from the repository root:
 
 ```bash
 python -m pytest -q
 ```
 
-This project uses a local virtual environment at `.venv` for dependency isolation.
+### Running the CLI
+
+Run the minimal SGitLine CLI client:
+
+```bash
+python -m sgit.cli --help
+```
